@@ -1,0 +1,113 @@
+const lib = require('lib')({token: process.env.STDLIB_SECRET_TOKEN});
+
+let CommandType = process.env.COMMANDTYPE;
+if (CommandType === 'prefix' || CommandType === 'both') {
+  let message = `${context.params.event.content}`;
+  if (message.startsWith(`${process.env.COMMANDPREFIX}warn`)) {
+    const now = new Date();
+    const m = now.getMonth() + 1; // 0 index based
+    const d = now.getDate();
+    const h = now.getHours();
+    const min = now.getMinutes();
+
+    const dateText = `${m}/${d}, ${h}:${min}`; // -> "6/6, 15:19"
+
+    let serverMember = await lib.discord.guilds['@0.1.0'].members.retrieve({
+      user_id: `${context.params.event.author.id}`,
+      guild_id: `${context.params.event.guild_id}`,
+    });
+    if (serverMember.roles.includes(`${process.env.ADMINROLE}`)) {
+      let userId = context.params.event.mentions[0].id;
+      let warning = message.split(' ').slice(2).join(' ');
+      console.log(userId);
+      await lib.discord.users['@0.1.1'].dms.create({
+        recipient_id: `${userId}`,
+        content: `**${process.env.SERVERNAME} Alert**`,
+        tts: false,
+        embed: {
+          type: 'rich',
+          title: 'Warned',
+          description: `Hey! You've been Warned in the ${process.env.SERVERNAME}.`,
+          color: 0xe09f3e,
+          fields: [
+            {
+              name: 'Warning',
+              value: `${warning}`,
+            },
+            {
+              name: 'Issue?',
+              value: `Does this seem wrong contact a ${process.env.SERVERNAME} Staff!`,
+            },
+          ],
+        },
+      });
+
+      await lib.discord.channels['@0.1.1'].messages.create({
+        channel_id: `${process.env.LOGCHANNEL}`,
+        content: '**Moderation Logs |** Warn',
+        tts: false,
+        embed: {
+          type: 'rich',
+          title: 'Warn',
+          description: `A User was Warned on the ${process.env.SERVERNAME}!`,
+          color: 0xe09f3e,
+          fields: [
+            {
+              name: 'User | 👤',
+              value: `<@!${userId}>`,
+            },
+            {
+              name: 'Warning | ⚠️',
+              value: `${warning}`,
+            },
+            {
+              name: 'Moderator | 🔒',
+              value: `<@!${context.params.event.author.id}>`,
+            },
+            {
+              name: 'Time | ⏱️',
+              value: `${dateText} UTC`,
+            },
+          ],
+        },
+      });
+
+      await lib.discord.channels['@0.1.0'].messages.create({
+        channel_id: `${context.params.event.channel_id}`,
+        content: '**User Warned**',
+        tts: false,
+        embed: {
+          type: 'rich',
+          title: 'Moderation - Warn :warning:',
+          description: `A User has been warned!`,
+          color: 0xe09f3e,
+          fields: [
+            {
+              name: 'User ',
+              value: `<@!${userId}> | 👤`,
+            },
+            {
+              name: 'Warning  -:warning:',
+              value: `${warning}`,
+            },
+          ],
+          footer: {
+            text: `Warned by ${context.params.event.author.username}`,
+          },
+        },
+      });
+    } else {
+      await lib.discord.channels['@0.1.0'].messages.create({
+        channel_id: `${context.params.event.channel_id}`,
+        content: '**Error**',
+        tts: false,
+        embed: {
+          type: 'rich',
+          title: `failed`,
+          description: `u arent allowed to run ${process.env.COMMANDPREFIX}warn, <@!${context.params.event.author.id}>.\nerror? contact ex#5555.`,
+          color: 0xcf4f4f,
+        },
+      });
+    }
+  }
+}
